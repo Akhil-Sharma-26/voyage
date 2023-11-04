@@ -13,9 +13,8 @@ dotenv.config({
 
 
 
-
-
 connectDB();
+
 
 
 
@@ -70,7 +69,7 @@ connectDB();
 /*
 ;(async() => { // The semicolon is used to avoid the error if the previous line is not ended with semicolon
     try { // always use try catch block for async await and while connecting to database
-        await mongoose.connect(`${process.env.MONGO_URL}/${DB_NAME}`) // await is used to wait for the response from the database
+        await mongoose.connect(`${process.env.MONGODB_URI}/${DB_NAME}`) // await is used to wait for the response from the database
         app.on("error",(error)=>{ // app.on is used to handle the error
             console.log("error",error); 
             throw error;
