@@ -1,3 +1,3 @@
-const DB_NAME = "my-voyage";
+const DB_NAME = "Voyage";
 
 export default DB_NAME;
