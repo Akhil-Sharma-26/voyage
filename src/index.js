@@ -2,10 +2,12 @@
 
 import dotenv from "dotenv";
 import connectDB from "./db/DB_connect.js";
-import mongoose from "mongoose";
-import DB_NAME from "./constants.js";
-import  express  from "express";
-const app = express();
+// import mongoose from "mongoose";
+// import DB_NAME from "./constants.js";
+// import  express  from "express";
+// import cors from "cors";
+import { app } from "./app.js";
+// const app = express();
 
 dotenv.config({
     path: "./.env"
