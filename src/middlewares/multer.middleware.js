@@ -1,7 +1,7 @@
 import multer from "multer";
 
 
-const storage = multer.diskStorage({ // notice I am calling the multer.diskStorage() method here, not multer() because I am using disk storage. Its' a middleware
+const storage = multer.diskStorage({ // notice I am calling the multer.diskStorage() method here, not multer() because I am using disk storage. Its' a middleware. See the multer docs for more info
     destination: function (req, file, cb) {
       cb(null, './public/temp')
     },

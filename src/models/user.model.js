@@ -3,7 +3,7 @@ import DB_NAME from '../constants.js';
 import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-
+const Schema = mongoose.Schema;
 const userSchema = new Schema({
     username:{
         type:String,
@@ -92,26 +92,25 @@ const userSchema = new Schema({
         default:false,
         required:true
     },
-    isBlocked:{
-        type:Boolean,
-        default:false,
-        required:true
-    },
-    
+    // isBlocked:{
+    //     type:Boolean,
+    //     default:false,
+    //     required:true
+    // },
 },{timestamps:true})
 
-userSchema.pre("save",async function(next){
+userSchema.pre("save",async function(next){ // Hashin password
     const user = this;
     if(user.isModified("password")){
         user.password = await bcrypt.hash(user.password,12);
     }
     next();
 })
-userSchema.methods.isPasswordCorrect = async function(password){
+userSchema.methods.isPasswordCorrect = async function(password){ // Checking password
     const user = this;
     return await bcrypt.compare(password,user.password);
 }
-userSchema.methods.generateAccessToken = async function(){
+userSchema.methods.generateAccessToken = async function(){ // Generating access token
     const user = this;
     const token = await jwt.sign({
         id:user._id,
@@ -125,7 +124,7 @@ userSchema.methods.generateAccessToken = async function(){
     });
     return token;
 }
-userSchema.methods.generateRefreshToken = async function(){
+userSchema.methods.generateRefreshToken = async function(){ // Generating refresh token
     const user = this;
     const token = await jwt.sign(
         {id:user._id},
