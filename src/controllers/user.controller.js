@@ -1,7 +1,8 @@
 import asyncHandler from '../utils/async_handler.js';
 import ApiError from '../utils/ApiErrorHandling.js';
 import User from '../models/user.model.js';
-
+import uploadonCloud from '../utils/cloudinary.services.js';
+import ApiResponse from '../utils/ApiResponse.js';
 const registerUser=asyncHandler(async(req,res)=>{
     // Some Steps:
     // 1. Get email, username and password from user
@@ -25,7 +26,8 @@ const registerUser=asyncHandler(async(req,res)=>{
     // 10. Test the API using postman
     // 11. Test the API using frontend
 
-    const {username, email, password, fullName, avatar} = req.body;
+    const {username, email, password, fullName, avatar, coverImage} = req.body;
+    // console.log("req.body: ",req.body)
     // console.log("userName:",username);
     if( !username || !email || !password || !fullName){
         throw new ApiError(400, "All fields are required");
@@ -36,7 +38,7 @@ const registerUser=asyncHandler(async(req,res)=>{
     // ){
     //     throw new ApiError(400, "All fields are required");
     // } 
-    const existedUser = User.findOne({
+    const existedUser = await User.findOne({
         $or:[
             { username },
             { email }
@@ -45,12 +47,46 @@ const registerUser=asyncHandler(async(req,res)=>{
     if(existedUser){
         throw new ApiError(400, "User already exists with this username or email");
     }
-    console.log("req.files: ",req.files);
+    // console.log("req.files: ",req.files);
     const avatarLocalPath = req.files?.avatar[0]?.path  // req.files access is given to us by Multer (middleware) and it is an array of files. ? because of optional chaining
-    const coverImageLocalPath = req.files?.coverImage[0]?.path
+    // let coverImageLocalPath = req.files?.coverImage[0]?.path 
+    // if(coverImageLocalPath == undefined){
+    //     // console.log("coverImageLocalPath is undefined");
+    //     coverImageLocalPath = "";
+    // }
+    let coverImageLocalPath;
+    if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length>0){
+        coverImageLocalPath = req.files.coverImage[0].path;
+    }
     if(!avatarLocalPath){
         throw new ApiError(400, "Avatar is required");
     }
+    // uploading on cloudinary
+    const avatarCloudinary = await uploadonCloud(avatarLocalPath);
+    const coverImageCloudinary = await uploadonCloud(coverImageLocalPath);
+    // console.log("avatarCloudinary: ",avatarCloudinary);
+    if(!avatarCloudinary){
+        throw new ApiError(400, "Avatar is required");
+    }
+    const user = await User.create({
+        username: username.toLowerCase(),
+        email,
+        password,
+        fullName,
+        avatar: avatarCloudinary.url,
+        coverImage: coverImageCloudinary?.url || "" // as I have not checked if coverImage is present or not
+    })
+    // console.log("user: ",user);
+    const CreatedUser = await User.findById(user._id).select("-password -refreshToken");
+    // console.log("CreatedUser: ",CreatedUser);
+    if(!CreatedUser){
+        throw new ApiError(500, "User creation failed");
+    }
+    return res.status(201).json(
+        new ApiResponse(200, CreatedUser, "User created successfully")
+    )
 })  
 
-export {registerUser}
+export {
+    registerUser,
+}

@@ -22,7 +22,8 @@ const uploadonCloud = async (Localfile) => {
             });
         //file has been uploaded successfully
         
-        console.log("File uploaded successfully", res.url);
+        // console.log("File uploaded successfully", res.url);
+        fs.unlinkSync(Localfile); // remove the file from the local storage which is already temporary stored
         return res;
     }catch(err){
         // error while uploading the file
