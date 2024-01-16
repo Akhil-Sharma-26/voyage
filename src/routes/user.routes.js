@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { registerUser } from "../controllers/user.controller.js";
+import { loginUser, logoutUser, registerUser } from "../controllers/user.controller.js";
 import upload from "../middlewares/multer.middleware.js";
+import { verifyJwt } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
@@ -16,7 +17,10 @@ router.route("/register").post(
     ]),
     registerUser
     ) // middleware matlab ki jaate hue mujhse milte hue jaana
-// router.route("/login").post(loginUser)
+    // yha post request aayega toh registerUser function ko call karo. isme upload middleware add krna hai because of the above stated resaon...
 
+router.route("/login").post(loginUser)
 
+// secured routes:
+router.route("/logout").post(verifyJwt, logoutUser)
 export default router;

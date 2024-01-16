@@ -3,6 +3,19 @@ import ApiError from '../utils/ApiErrorHandling.js';
 import User from '../models/user.model.js';
 import uploadonCloud from '../utils/cloudinary.services.js';
 import ApiResponse from '../utils/ApiResponse.js';
+import isPasswordCorrect from '../models/user.model.js';
+const generateAccessAndRefreshTokens = async(userId)=>{
+    try {
+        const user = await User.findById(userId);
+        const accessToken = user.generateAccessToken(); // method as defind in modal of user
+        const refreshToken = user.generateRefreshToken();
+        user.refreshToken=refreshToken;
+        await user.save({validateBeforeSave:false}); // validateBeforeSave is false because we are not updating all field
+        return {accessToken, refreshToken};
+    } catch (error) {
+        throw new ApiError(500, "Token creation failed");
+    }
+}
 const registerUser=asyncHandler(async(req,res)=>{
     // Some Steps:
     // 1. Get email, username and password from user
@@ -86,7 +99,95 @@ const registerUser=asyncHandler(async(req,res)=>{
         new ApiResponse(200, CreatedUser, "User created successfully")
     )
 })  
+const loginUser=asyncHandler(async(req,res)=>{
+    // Some Steps:
+    // 1. Get email and password from user
+    // 2. Check if the user exists in the database. (Validations - eg. all not empty, email is valid, password is strong)
+    // 3. If the user exists then check the password
+    // 4. If the password is correct then create access and refresh token
+    // 5. Save the JWT token in the database
+    // 6. Send the JWT token to the client/ cookies
+    // 7. Test the API using postman
+    // 9. Test the API using frontend
 
+    const {email, username, password} = req.body;
+    if(email || username){
+        throw new ApiError(400, "At least username or email is req.");
+    }
+    if(!password){
+        throw new ApiError(400, "Password is required");
+    }
+    
+    const user = await User.findOne({
+        $or:[
+            { username: username.toLowerCase() },
+            { email }
+        ]
+    });
+    if(!user){
+        throw new ApiError(400, "User does not exist");
+    }
+    // const isPasswordCorrect = await user.comparePassword(password); // check how this is working
+    const isPassValid = await user.isPasswordCorrect(password);
+    if(!isPassValid){
+        throw new ApiError(400, "Password is incorrect");
+    }
+    const token = await user.createJWTToken();
+    if(!token){
+        throw new ApiError(500, "Token creation failed");
+    }
+    // console.log("token: ",token);
+    // res.cookie("token", token, {
+    //     httpOnly: true,
+    //     secure: process.env.NODE_ENV === "production" ? true : false,
+    //     expires: new Date(Date.now() + 3600000) // 1 hour
+    // })
+    const {accessToken,refreshToken}= generateAccessAndRefreshTokens(user._id);
+
+    const logedInuser = await User.findById(user._id).select("-password -refreshToken");
+
+    const options = {
+        httpOnly: true,
+        secure: true
+    } // secure is true because we are using https. Modifyable using server only (not client)
+    return res.status(200)
+    .cookie("accessToken",accessToken, options)
+    .cookie("refreshToken",refreshToken,options)
+    .json(
+        new ApiResponse(
+            200, 
+            {user:logedInuser,accessToken,refreshToken3},
+            "User logged in successfully"
+            )
+    )
+})
+
+const logoutUser=asyncHandler(async(req,res)=>{
+    // Some Steps:
+    // 1. Get the refresh token from the client.
+    // here by using middleware of auth
+    // 2. Check if the refresh token exists in the database
+    // 3. If the refresh token exists then delete it from the database
+    // 4. Send the response to the client
+    // 5. Test the API using postman
+    // 6. Test the API using frontend
+    await User.findByIdAndUpdate(req.user._id,{
+        $set: {
+            refreshToken: undefined
+        }
+    },
+    {
+        new: true
+    }
+    )
+    const options = {
+        httpOnly: true,
+        secure:true
+    }
+    return res.status(200).clearCookie("accessToken",options).clearCookie("refreshToken",options).json(new ApiResponse(200,{},"User Logged Out!!"))
+})
 export {
     registerUser,
+    loginUser,
+    logoutUser
 }
