@@ -109,9 +109,12 @@ const loginUser=asyncHandler(async(req,res)=>{
     // 6. Send the JWT token to the client/ cookies
     // 7. Test the API using postman
     // 9. Test the API using frontend
-
+    console.log(req.body)
     const {email, username, password} = req.body;
-    if(email || username){
+    console.log(email)
+    console.log(username)
+    console.log(password)
+    if(!(email || username)){
         throw new ApiError(400, "At least username or email is req.");
     }
     if(!password){
@@ -130,19 +133,19 @@ const loginUser=asyncHandler(async(req,res)=>{
     // const isPasswordCorrect = await user.comparePassword(password); // check how this is working
     const isPassValid = await user.isPasswordCorrect(password);
     if(!isPassValid){
-        throw new ApiError(400, "Password is incorrect");
+        throw new ApiError(401, "Password is incorrect");
     }
-    const token = await user.createJWTToken();
-    if(!token){
-        throw new ApiError(500, "Token creation failed");
-    }
+    // const token = await user.createJWTToken();
+    // if(!token){
+    //     throw new ApiError(500, "Token creation failed");
+    // }
     // console.log("token: ",token);
     // res.cookie("token", token, {
     //     httpOnly: true,
     //     secure: process.env.NODE_ENV === "production" ? true : false,
     //     expires: new Date(Date.now() + 3600000) // 1 hour
     // })
-    const {accessToken,refreshToken}= generateAccessAndRefreshTokens(user._id);
+    const {accessToken,refreshToken}= await generateAccessAndRefreshTokens(user._id);
 
     const logedInuser = await User.findById(user._id).select("-password -refreshToken");
 
@@ -156,7 +159,7 @@ const loginUser=asyncHandler(async(req,res)=>{
     .json(
         new ApiResponse(
             200, 
-            {user:logedInuser,accessToken,refreshToken3},
+            {user:logedInuser,accessToken,refreshToken},
             "User logged in successfully"
             )
     )
@@ -177,7 +180,7 @@ const logoutUser=asyncHandler(async(req,res)=>{
         }
     },
     {
-        new: true
+        new: true // new is used to return the updated document
     }
     )
     const options = {

@@ -118,7 +118,7 @@ userSchema.methods.generateAccessToken = async function(){ // Generating access 
         username:user.username,
         fullName:user.fullName,
     },
-    process.env.ACCESS_TOKEN_SE,
+    process.env.ACCESS_TOKEN_SECRET,
     {
         expiresIn:process.env.ACCESS_TOKEN_EXPIRY
     });

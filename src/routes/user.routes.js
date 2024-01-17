@@ -22,5 +22,5 @@ router.route("/register").post(
 router.route("/login").post(loginUser)
 
 // secured routes:
-router.route("/logout").post(verifyJwt, logoutUser)
+router.route("/logout").post(verifyJwt, logoutUser) // verifyJwt is a middleware which is used to verify the jwt token
 export default router;
