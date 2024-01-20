@@ -17,6 +17,6 @@ const commentSchema = new mongoose.Schema({
         required:true
     },
 },{timestamps:true})
-videoSchema.plugin(mongooseAggregatePaginate); // mongooseAggregatePaginate is used to paginate the data ie. to show the data in pages
+commentSchema.plugin(mongooseAggregatePaginate); // mongooseAggregatePaginate is used to paginate the data ie. to show the data in pages
 const Comment = mongoose.model("Comment",commentSchema);
 export default Comment;

@@ -110,9 +110,9 @@ userSchema.methods.isPasswordCorrect = async function(password){ // Checking pas
     const user = this;
     return await bcrypt.compare(password,user.password);
 }
-userSchema.methods.generateAccessToken = async function(){ // Generating access token
+userSchema.methods.generateAccessToken = function(){ // Generating access token
     const user = this;
-    const token = await jwt.sign({
+    const token = jwt.sign({
         id:user._id,
         email:user.email,
         username:user.username,
@@ -124,14 +124,15 @@ userSchema.methods.generateAccessToken = async function(){ // Generating access 
     });
     return token;
 }
-userSchema.methods.generateRefreshToken = async function(){ // Generating refresh token
+userSchema.methods.generateRefreshToken = function(){ // Generating refresh token
     const user = this;
-    const token = await jwt.sign(
+    const token = jwt.sign(
         {id:user._id},
         process.env.REFRESH_TOKEN_SECRET,
         {expiresIn:process.env.REFRESH_TOKEN_EXPIRY});
     return token;
-}
+} 
+// I was using async in above 2 methods but it was giving me error. the error was because async was not able to return the token at sync time. so it was returning a promis object. Even after using await it was not working. so I had to make the above functions as sync functions.
 const User = mongoose.model("User",userSchema);
 
 export default User;
