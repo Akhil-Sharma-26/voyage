@@ -23,4 +23,5 @@ router.route("/login").post(loginUser)
 
 // secured routes:
 router.route("/logout").post(verifyJwt, logoutUser) // verifyJwt is a middleware which is used to verify the jwt token
+router.route("/refresh-token").post(refreshAccessToken) // refresh token ko use krke new access token bnwa rha hu
 export default router;

@@ -189,8 +189,40 @@ const logoutUser=asyncHandler(async(req,res)=>{
     }
     return res.status(200).clearCookie("accessToken",options).clearCookie("refreshToken",options).json(new ApiResponse(200,{},"User Logged Out!!"))
 })
+
+// agr refresh token khtm ho gya h to clien ek aur req marke token refresh krva ske 
+// refresh token ko use krke
+// refresh token ko use krke new access token bnwa skte h
+const refreshAccessToken=asyncHandler(async(req,res)=>{
+    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken || req.headers.refreshToken
+    if(!incomingRefreshToken){
+        throw new ApiError(401, "Refresh token is required");
+    }
+    try {
+        const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET)
+        const user = await User.findById(decodedToken?.userId)
+        if(!user){
+            throw new ApiError(401, "Invalid refresh token");
+        }
+        if(user?.refreshToken !== incomingRefreshToken){
+            throw new ApiError(401, "Refresh token has expired"); // ? is used because user can be null or undefined and we can not access refreshToken property of null or undefined 
+        }
+    
+        const options = {
+            httpOnly: true,
+            secure: true
+        }
+        const {accessToken,newrefreshToken}= await generateAccessAndRefreshTokens(user._id)
+        return res.status(200).cookie("accessToken",accessToken, options).cookie("refreshToken",newrefreshToken,options).json(new ApiResponse(200,{accessToken,refreshToken: newrefreshToken},"Access Token refreshed successfully"))
+    } catch (error) {
+        throw new ApiError(401, error?.message || "Invalid refresh token");
+    }
+})
+
+
 export {
     registerUser,
     loginUser,
-    logoutUser
+    logoutUser,
+    refreshAccessToken
 }
