@@ -4,6 +4,7 @@ import User from '../models/user.model.js';
 import uploadonCloud from '../utils/cloudinary.services.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import isPasswordCorrect from '../models/user.model.js';
+import mongoose from 'mongoose';
 const generateAccessAndRefreshTokens = async(userId)=>{
     try {
         const user = await User.findById(userId);
@@ -277,6 +278,7 @@ const updateAvatar = asyncHandler(async(req,res)=>{
     .status(200)
     user
 })
+// TODO Delete the old avatar Image
 const updateCover = asyncHandler(async(req,res)=>{
     const CoverLocalFile = req.file?.path
     if(!CoverLocalFile){
@@ -299,6 +301,171 @@ const updateCover = asyncHandler(async(req,res)=>{
         new ApiResponse(200,user,"Cover Image updated successfully")
     )
 })
+const getUserChannelProfile = asyncHandler(async(req,res)=>{
+    const {username} = req.params
+    if(!username?.trim()){
+        throw new ApiError(400, "Username is required");
+    }
+    const channel = await User.aggregate([
+        {
+            $match:{
+                username: username.toLowerCase()
+            }
+        },
+        {
+            $lookup: {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "channel",
+                as: "subscribers"
+            }
+        },
+        {
+            $lookup:{
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "subscriber",
+                as: "subscribedTo"
+            }
+        },
+        {
+            $addFields:{
+                subscribersCount:{
+                    $size:"$subscribers",
+                },
+                channelsSubscribedCount:{
+                    $size:"$subscribedTo"
+                },
+                isSubscribed:{
+                    $cond:{
+                        if:{
+                            $in: [req.user?._id, "$subscribers.subscriber"],
+                        },
+                        then: true,
+                        else: false
+                    }
+                }
+            }
+        },
+        {
+            $project:{
+                fullName: 1,
+                username: 1,
+                subscribersCount: 1,
+                channelsSubscribedCount: 1,
+                avatar: 1,
+                coverImage: 1,
+                email: 1,
+                createdAt: 1,
+            }
+        }
+    ])
+    console.log(channel)
+    // what data type does aggreagate returns: array
+    if(!channel?.length){
+        throw new ApiError(404, "Channel not found");
+    }
+    return res.status(200).json(new ApiResponse(200,channel[0],"Channel profile fetched successfully"))
+})
+const getUserHistory = asyncHandler(async(req,res)=>{
+    // const {username} = req.params
+    // if(!username?.trim()){
+    //     throw new ApiError(400, "Username is required");
+    // }
+    // const channel = await User.aggregate([
+    //     {
+    //         $match:{
+    //             username: username.toLowerCase()
+    //         }
+    //     },
+    //     {
+    //         $lookup:{
+    //             from: "videos",
+    //             localField: "watchedHistory",
+    //             foreignField: "_id",
+    //             as: "watchedVideos"
+    //         }
+    //     },
+    //     {
+    //         $project:{
+    //             watchedVideos: 1,
+    //             fullName: 1,
+    //             username: 1,
+    //             avatar: 1,
+    //             coverImage: 1,
+    //             email: 1,
+    //             createdAt: 1,
+    //         }
+    //     }
+    // ])
+    // console.log(channel)
+    // // what data type does aggreagate returns: array
+    // if(!channel?.length){
+    //     throw new ApiError(404, "Channel not found");
+    // }
+    // return res.status(200).json(new ApiResponse(200,channel[0],"Channel profile fetched successfully"))
+}) // TODO
+// const getUserLikedVideos = asyncHandler(async(req,res)=>{}) // TODO
+// const getUserSavedVideos = asyncHandler(async(req,res)=>{}) // TODO
+// const getUserSubscriptions = asyncHandler(async(req,res)=>{}) // TODO
+// const getUserLikedComments = asyncHandler(async(req,res)=>{}) // TODO
+// const getUserSavedComments = asyncHandler(async(req,res)=>{}) // TODO
+// const getUserLikedReplies = asyncHandler(async(req,res)=>{}) // TODO
+// const getUserSavedReplies = asyncHandler(async(req,res)=>{}) // TODO
+// const getUserLikedChannels = asyncHandler(async(req,res)=>{}) // TODO
+// const getUserSavedChannels = asyncHandler(async(req,res)=>{}) // TODO
+// const getUserLikedPlaylists = asyncHandler(async(req,res)=>{}) // TODO
+// const getUserSavedPlaylists = asyncHandler(async(req,res)=>{}) // TODO
+// const getUserLikedCategories = asyncHandler(async(req,res)=>{}) // TODO
+// const getUserSavedCategories = asyncHandler(async(req,res)=>{}) // TODO
+// const getUserLikedTags = asyncHandler(async(req,res)=>{}) // TODO
+// const getUserSavedTags = asyncHandler(async(req,res)=>{}) // TODO
+// const getUserLikedPosts = asyncHandler(async(req,res)=>{}) // TODO
+// const getUserSavedPosts = asyncHandler(async(req,res)=>{}) // TODO
+
+const getWatchHistory = asyncHandler(async(req,res)=>{
+    const user = await User.aggregate([
+        {
+            $match:{
+                _id: new mongoose.Types.ObjectId(req.user._id)
+            }
+        },
+        {
+            $lookup:{
+                from: "videos",
+                localField: "watchedHistory",
+                foreignField: "_id",
+                as: "watchedVideos",
+                pipeline: [
+                    {
+                        $lookup:{
+                            from: "users",
+                            localField: "owner",
+                            foreignField: "_id",
+                            as: "owner",
+                            pipeline: [{
+                                $project:{
+                                    fullName: 1,
+                                    username: 1,
+                                    avatar: 1
+                                }
+                            }]
+                        }
+                    },
+                    {
+                        $addFields:{
+                            owner:{
+                                $first: "$owner"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+    ])
+    return res.status(200).json(new ApiResponse(200,user[0]?.watchedVideos,"Watch History fetched successfully"))
+})
+
 export {
     registerUser,
     loginUser,
@@ -308,5 +475,7 @@ export {
     getUserProfile,
     updateAccDetails,
     updateAvatar,
-    updateCover
+    updateCover,
+    getUserChannelProfile,
+    getUserHistory,
 }
